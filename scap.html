@@ -1,103 +1,133 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <title>Radar-like Circle with Dots</title>
 </head>
 <body style="
-  text-align: center;
-  vertical-align: center;
-  background-color: black;
+    text-align: center;
+    vertical-align: center;
+    background-color: black;
   ">
-<div>
-  <script>
-    let numDots = 80;
-    let dots = [];
-    let minDistance = 20; // minimum distance in pixels (6 times the radius, if radius is 10)
-    let dot_size = 8;
-    let radius = 150; // radius of the main circle
-    let hyperlinkIndex;
+<canvas id="myCanvas" width="500" height="500"></canvas>
+<script>
+  const numDots = 200;
+  const minDistance = 10; // in pixels
+  const radius = 125;     // radius of the main circle in px
+  const dotRad = 3;       // in pix
+  const zJiggle = false;
 
-    function setup() {
-      createCanvas(620, 600); // Adjusted canvas size for two circles
-      background(0);
-      stroke(100);
-      strokeWeight(1);
+  let dots = [];
+  let hyperlinkIndex;
 
-      // Draw radar lines and main circle
-      fill(0);
-      ellipse(width / 4, height / 2, radius * 2, radius * 2);  // First circle
-      ellipse(3 * width / 4, height / 2, radius * 2, radius * 2);  // Second circle
-      noFill();
-      for (let i = 0; i < TWO_PI; i += PI / 6) {
-        line(width / 4, height / 2, width / 4 + cos(i) * radius, height / 2 + sin(i) * radius);
-        line(3 * width / 4, height / 2, 3 * width / 4 + cos(i) * radius, height / 2 + sin(i) * radius);
-      }
-      for (let r = radius / 6; r < radius; r += radius / 6) {
-        ellipse(width / 4, height / 2, r * 2, r * 2);
-        ellipse(3 * width / 4, height / 2, r * 2, r * 2);
-      }
+  function setup() {
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'grey';
+    ctx.lineWidth = 1;
 
-      // Generate and draw dots
-      for (let i = 0; i < numDots; i++) {
-        let valid = false;
-        let x, y;
-        while (!valid) {
-          let angle = random(TWO_PI);
-          let r = random(radius);
-          x = width / 4 + cos(angle) * r;
-          y = height / 2 + sin(angle) * r;
-          valid = true;
-          for (let dot of dots) {
-            if (dist(x, y, dot.x, dot.y) < minDistance) {
-              valid = false;
-              break;
-            }
+    // Draw lines
+    drawRadar(ctx, canvas.width / 4, canvas.height / 2, radius);
+    drawRadar(ctx, 3 * canvas.width / 4, canvas.height / 2, radius);
+
+    // Generate dots
+    generateDots();
+
+    // Select a random dot to be a hyperlink
+    hyperlinkIndex = Math.floor(Math.random() * numDots);
+    dots[hyperlinkIndex].isHyperlink = true;
+
+    // Draw dots
+    drawDots(ctx, canvas.width / 4, canvas.height / 2, false);
+    drawDots(ctx, 3 * canvas.width / 4, canvas.height / 2, true);
+  }
+
+  function drawRadar(ctx, centerX, centerY, radius) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    for (let i = 0; i < 2 * Math.PI; i += Math.PI / 6) {
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX + Math.cos(i) * radius, centerY + Math.sin(i) * radius);
+    }
+    ctx.stroke();
+    for (let r = radius / 6; r < radius; r += radius / 6) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+  }
+
+  function zShift() {
+    if (zJiggle) {
+        return 5*Math.random();
+    } else {
+        return 0;
+    }
+  }
+
+  function generateDots() {
+    dots = [];
+    for (let i = 0; i < numDots; i++) {
+      let valid = false;
+      let j;
+      let x, y;
+      while (!valid) {
+        let angle = Math.random() * 2 * Math.PI;
+        let r = Math.random() * radius;
+        x = Math.cos(angle) * r;
+        y = Math.sin(angle) * r;
+        valid = true;
+        for (let dot of dots) {
+          if (Math.sqrt((x - dot.x) ** 2 + (y - dot.y) ** 2) < minDistance) {
+            valid = false;
+            break;
           }
         }
-        let color = [random(0, 255), random(0, 255), random(0, 255)];
-        dots.push({ x, y, color });
-        fill(color);
-        noStroke();
-        ellipse(x, y, dot_size, dot_size); // dot size
-      }
-
-      // Select a random dot to be a hyperlink
-      hyperlinkIndex = floor(random(numDots));
-      dots[hyperlinkIndex].isHyperlink = true;
-    }
-
-    function draw() {
-      // Draw dots in the first circle
-      for (let i = 0; i < dots.length; i++) {
-        if (dots[i].isHyperlink) {
-          // fill(255, 0, 0); // Hyperlink color
-          fill(255, 0, 0, 0); // Fully transparent hyperlink dot
-        } else {
-          fill(dots[i].color);
+        j++;
+        if (j >= 100) {
+          valid = true;
+          x=0;
+          y=0;
         }
-        ellipse(dots[i].x, dots[i].y, dot_size, dot_size); // dot size
       }
-
-      // Draw dots in the second circle
-      for (let i = 0; i < dots.length; i++) {
-        if (dots[i].isHyperlink) {
-          // fill(255, 0, 0, 0); // Fully transparent hyperlink dot
-        } else {
-          fill(dots[i].color);
-        }
-        ellipse(dots[i].x + width / 2 + random(4), dots[i].y + random(4), dot_size, dot_size); // Shift x position for second circle
-      }
+      let color = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+      dots.push({ x, y, color });
     }
+  }
 
-    function mousePressed() {
-      // Check if the hyperlink dot is clicked in the first circle
-      let dot = dots[hyperlinkIndex];
-      if (dist(mouseX, mouseY, dot.x, dot.y) < 5) {
-        dots = [];
-        setup();
+  function drawDots(ctx, offsetX, offsetY, transparent) {
+    for (let i = 0; i < dots.length; i++) {
+      if (dots[i].isHyperlink && transparent) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Fully transparent hyperlink dot
+      } else {
+        ctx.fillStyle = dots[i].color;
       }
+      ctx.beginPath();
+      ctx.arc(offsetX + dots[i].x + zShift(), offsetY + dots[i].y, dotRad, 0, 2 * Math.PI);
+      ctx.fill();
     }
-  </script> 
-</div>
+  }
+
+  document.getElementById('myCanvas').addEventListener('click', function (event) {
+    const canvas = document.getElementById('myCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const dot = dots[hyperlinkIndex];
+    const dot1X = canvas.width / 4 + dot.x;
+    const dot2X = 3*canvas.width / 4 + dot.x;
+    const dotY = canvas.height / 2 + dot.y;
+    if ((Math.sqrt((x - dot1X) ** 2 + (y - dotY) ** 2) < dotRad + dotRad/4)
+         ||
+       (Math.sqrt((x - dot2X) ** 2 + (y - dotY) ** 2) < dotRad + dotRad/4)) {
+      setup();
+    }
+  });
+
+  setup();
+</script>
 </body>
 </html>
